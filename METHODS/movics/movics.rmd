@@ -1,0 +1,197 @@
+---
+title: "MOVIS"
+author: "Kristian Alikaj"
+date: "2024-12-08"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(MOVICS)
+```
+
+
+```{r}
+load(system.file("extdata", "brca.tcga.RData", package = "MOVICS", mustWork = TRUE))
+load(system.file("extdata", "brca.yau.RData",  package = "MOVICS", mustWork = TRUE))
+```
+
+
+```{r}
+names(brca.tcga)
+```
+
+
+```{r}
+names(brca.yau)
+```
+
+
+```{r}
+# extract multi-omics data
+mo.data   <- brca.tcga[1:4]
+```
+
+
+```{r}
+## Extracting data for downstream analysis
+count     <- brca.tcga$count
+fpkm      <- brca.tcga$fpkm
+maf       <- brca.tcga$maf
+segment   <- brca.tcga$segment
+surv.info <- brca.tcga$clin.info
+```
+
+
+```
+getElites() function to filter out features that meet some stringent requirements, and those features that are preserved in this procedure are considered elites by MOVICS. Five filtering methods are provided here, namely mad for median absolute deviation, sd for standard deviation, pca for principal components analysis, cox for univariate Cox proportional hazards regression, and freq for binary omics data. This function also handles missing values coded in NA
+ by removing them directly or imputing them by k
+ nearest neighbors using a Euclidean metric through argument of na.action
+```
+
+
+
+```{r}
+# ident optimal clustering number 
+optk.brca <- getClustNum(data        = mo.data,
+                         is.binary   = c(F,F,F,T),
+                         try.N.clust = 2:8, # trying cluster number from 2 to 8
+                         fig.name    = "CLUSTER NUMBER OF TCGA-BRCA")
+```
+
+
+
+```{r}
+#  iClusterBayes 
+iClusterBayes.res <- getiClusterBayes(data        = mo.data,
+                                      N.clust     = 5,
+                                      type        = c("gaussian","gaussian","gaussian","binomial"),
+                                      n.burnin    = 1800,
+                                      n.draw      = 1200,
+                                      prior.gamma = c(0.5, 0.5, 0.5, 0.5),
+                                      sdev        = 0.05,
+                                      thin        = 3)
+```
+
+
+
+
+
+```{r}
+# convert beta value to M value for stronger signal
+indata <- mo.data
+indata$meth.beta <- log2(indata$meth.beta / (1 - indata$meth.beta))
+
+# data normalization for heatmap
+plotdata <- getStdiz(data       = indata,
+                     halfwidth  = c(2,2,2,NA), # no truncation for mutation
+                     centerFlag = c(T,T,T,F), # no center for mutation
+                     scaleFlag  = c(T,T,T,F)) # no scale for mutation
+```
+
+
+
+
+```{r}
+feat   <- iClusterBayes.res$feat.res
+feat1  <- feat[which(feat$dataset == "mRNA.expr"),][1:10,"feature"] 
+feat2  <- feat[which(feat$dataset == "lncRNA.expr"),][1:10,"feature"]
+feat3  <- feat[which(feat$dataset == "meth.beta"),][1:10,"feature"]
+feat4  <- feat[which(feat$dataset == "mut.status"),][1:10,"feature"]
+annRow <- list(feat1, feat2, feat3, feat4)
+```
+
+
+
+```{r}
+
+mRNA.col   <- c("#00FF00", "#008000", "#000000", "#800000", "#FF0000")
+lncRNA.col <- c("#6699CC", "white"  , "#FF3C38")
+meth.col   <- c("#0074FE", "#96EBF9", "#FEE900", "#F00003")
+mut.col    <- c("grey90" , "black")
+col.list   <- list(mRNA.col, lncRNA.col, meth.col, mut.col)
+
+# comprehensive heatmap (
+getMoHeatmap(data          = plotdata,
+             row.title     = c("mRNA","lncRNA","Methylation","Mutation"),
+             is.binary     = c(F,F,F,T), 
+             legend.name   = c("mRNA.FPKM","lncRNA.FPKM","M value","Mutated"),
+             clust.res     = iClusterBayes.res$clust.res, 
+             clust.dend    = NULL, # no dendrogram
+             show.rownames = c(F,F,F,F),
+             show.colnames = FALSE, 
+             annRow        = annRow, 
+             color         = col.list,
+             annCol        = NULL,
+             annColors     = NULL,
+             width         = 10, 
+             height        = 5, 
+             fig.name      = "COMPREHENSIVE HEATMAP OF ICLUSTERBAYES")
+```
+
+
+
+
+```
+After identification of cancer subtypes, it is essential to further characterize each subtype by discovering their difference from multiple aspects. To this end, MOVICS provides commonly used downstream analyses in cancer subtyping researches for easily cohesion with results derived from GET Module.
+```
+
+
+```{r}
+# survival comparison
+surv.brca <- compSurv(moic.res         = iClusterBayes.res,
+                      surv.info        = surv.info,
+                      convt.time       = "m", #m for month as unit
+                      surv.median.line = "h", 
+                      xyrs.est         = c(5,10), # 5 and 10-year survival
+                      fig.name         = "KAPLAN-MEIER CURVE OF CONSENSUSMOIC")
+```
+
+```{r}
+print(surv.brca)
+```
+
+
+
+
+```{r}
+## Comparing clin. features
+
+clin.brca <- compClinvar(moic.res      = iClusterBayes.res,
+                         var2comp      = surv.info, 
+                         strata        = "Subtype",
+                         factorVars    = c("PAM50","pstage","fustat"), 
+                         nonnormalVars = "futime",
+                         exactVars     = "pstage",
+                         doWord        = TRUE, 
+                         tab.name      = "SUMMARIZATION OF CLINICAL FEATURES")
+```
+
+
+```{r}
+print(clin.brca$compTab)
+```
+
+
+
+```{r}
+# drug sensitivity comparison
+drug.brca <- compDrugsen(moic.res    = iClusterBayes.res,
+                         norm.expr   = fpkm[,iClusterBayes.res$clust.res$samID], 
+                         drugs       = c("Cisplatin", "Paclitaxel"), 
+                         tissueType  = "breast", 
+                         test.method = "nonparametric", # statistical testing 
+                         prefix      = "BOXVIOLIN OF ESTIMATED IC50") 
+```
+
+
+
+
+
+
+
+
