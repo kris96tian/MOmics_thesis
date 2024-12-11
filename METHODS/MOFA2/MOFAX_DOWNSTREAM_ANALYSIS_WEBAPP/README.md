@@ -2,6 +2,10 @@
 
 Explore, visualize, and analyze your **MOFA+ (Multi-Omics Factor Analysis)** results with ease! This Streamlit app provides an interactive interface to load and interrogate **multi-omics models** in `.hdf5` format.
 
+## 🖥️ Link
+
+Access the app at **[MOFA+ Model Explorer](https://mofaviz.streamlit.app/)**.
+
 ## 🚀 Features
 
 ### Data Analysis
@@ -47,9 +51,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## 🖥️ Try it Live
 
-Access the app at **[MOFA+ Model Explorer](https://mofaviz.streamlit.app/)**.
 
 ## 🧬 About MOFA+
 
