@@ -1,0 +1,260 @@
+---
+title: "Glioblastoma_mixomics_supervised"
+format: pdf
+editor: visual
+---
+
+```{r, echo=FALSE}
+library(data.table)
+library(mixOmics)
+```
+
+processed/glioblastoma_data_no_caseid.RData")
+
+```{r}
+load("~/PROJECTS_ALL/DATA_Glioblastoma/preprocessed/glioblastoma_data_no_caseid.RData")
+```
+
+```{r}
+X <- list(mRNA = glioblastoma_data$data.train$mrna,
+          methylation = glioblastoma_data$data.train$methylation,
+          protein = glioblastoma_data$data.train$protein
+)
+
+Y <- glioblastoma_data$data.train$class
+
+```
+
+```{r}
+Y[is.na(Y)] <- 0
+Y <- factor(Y, levels = c(0, 1))
+print(Y)
+```
+
+```{r}
+design <- matrix(0.1, ncol = length(X), nrow = length(X), 
+                dimnames = list(names(X), names(X)))
+diag(design) <- 0
+design 
+```
+
+```{r}
+res1.pls.gbm <- pls(X$mRNA, X$protein, ncomp = 1)
+cor(res1.pls.gbm$variates$X, res1.pls.gbm$variates$Y)
+```
+
+```{r}
+res2.pls.gbm <- pls(X$mRNA, X$methylation, ncomp = 1)
+cor(res2.pls.gbm$variates$X, res2.pls.gbm$variates$Y)
+```
+
+```{r}
+res3.pls.gbm <- pls(X$protein, X$methylation, ncomp = 1)
+cor(res3.pls.gbm$variates$X, res3.pls.gbm$variates$Y)
+```
+
+```{r}
+diablo.gbm <- block.plsda(X, Y, ncomp = 5, design = design)
+```
+
+```{r}
+set.seed(123) 
+
+perf.diablo.gbm = perf(diablo.gbm, validation = 'Mfold', folds = 10, nrepeat = 10)
+```
+
+```{r}
+plot(perf.diablo.gbm)
+
+```
+
+```{r}
+perf.diablo.gbm$choice.ncomp$WeightedVote
+```
+
+```{r}
+ncomp <- perf.diablo.gbm$choice.ncomp$WeightedVote["Overall.BER", "centroids.dist"]
+```
+
+```{r}
+set.seed(123) 
+
+test.keepX <- list(mRNA = c(5:9, seq(10, 25, 5)),
+                   methylation = c(5:9, seq(10, 20, 2)),
+                   proteomics = c(seq(5, 25, 5)))
+
+
+tune.diablo.gbm <- tune.block.splsda(X, Y, ncomp = 2, 
+                              test.keepX = test.keepX, design = design,
+                              validation = 'Mfold', folds = 10, nrepeat = 2, 
+                              BPPARAM = BiocParallel::SnowParam(workers = 2),
+                              dist = "centroids.dist")
+```
+
+```{r}
+list.keepX <- tune.diablo.gbm$choice.keepX
+
+```
+
+```{r}
+list.keepX
+```
+
+```{r}
+diablo.gbm <- block.splsda(X, Y, ncomp = 2, 
+                            keepX = list.keepX, design = design)
+```
+
+```{r}
+diablo.gbm$design
+
+```
+
+```{r}
+# mRNA variables selected on component 1
+selectVar(diablo.gbm, block = 'mRNA', comp = 1)
+```
+
+## **Plotting**
+
+`plotDiablo()` is a diagnostic plot to check whether the correlations between components from each data set were maximised as specified in the design matrix. We specify the dimension to be assessed with the `ncomp` argument
+
+```{r}
+plotDiablo(diablo.gbm, ncomp = 2)
+```
+
+```{r}
+plotIndiv(diablo.gbm, ind.names = FALSE, legend = TRUE, 
+          title = 'Glioblastoma, DIABLO comp 1 - 2')
+```
+
+```{r}
+plotArrow(diablo.gbm, ind.names = FALSE, legend = TRUE, 
+          title = 'Glioblastoma, DIABLO comp 1 - 2')
+```
+
+```{r}
+plotVar(diablo.gbm, var.names = FALSE, style = 'graphics', legend = TRUE, 
+        pch = c(16, 17, 15), cex = c(2,2,2), 
+        col = c('darkorchid', 'brown1', 'lightgreen'),
+        title = 'Glioblastoma, DIABLO comp 1 - 2')
+```
+
+**Correlation circle plot from multiblock sPLS-DA performed on the `glioblastoma` data.** The variable coordinates are defined according to their correlation with the first and second components for each data set. Variable types are indicated with different symbols and colours, and are overlaid on the same plot. The plot highlights the potential associations within and between different variable types when they are important in defining their own component.
+
+```{r}
+circosPlot(diablo.gbm, cutoff = 0.6, line = TRUE, 
+           color.blocks = c('darkorchid', 'brown1', 'lightgreen'),
+           color.cor = c("chocolate3","grey20"), size.labels = 1.5)
+```
+
+**Circos plot from multiblock sPLS-DA performed on the `glioblastoma` data.** The plot represents the correlations greater than 0.6 between variables of different types, represented on the side quadrants. The internal connecting lines show the positive (negative) correlations. The outer lines show the expression levels of each variable in each sample group.
+
+```{r}
+network(diablo.gbm, blocks = c(1,2,3), 
+        cutoff = 0.4,
+        color.node = c('darkorchid', 'brown1', 'lightgreen'),
+        save = 'png', name.save = 'diablo-network'
+        )
+```
+
+![](images/clipboard-2272810777.png)
+
+**Relevance network for the variables selected by multiblock sPLS-DA performed on the `glioblastoma` data on component 1.** Each node represents a selected variable with colours indicating their type. The colour of the edges represent positive or negative correlations.
+
+## Model performance and prediction
+
+```{r}
+set.seed(123) 
+
+perf.diablo.gbm <- perf(diablo.gbm,  validation = 'Mfold', folds = 10, 
+                         nrepeat = 10, dist = 'centroids.dist')
+
+```
+
+```{r}
+# Performance with Majority vote
+perf.diablo.gbm$MajorityVote.error.rate
+```
+
+```{r}
+# Performance with Weighted vote
+perf.diablo.gbm$WeightedVote.error.rate
+```
+
+```{r}
+auc.diablo.gbm <- auroc(diablo.gbm, roc.block = "protein", roc.comp = 2,
+                   print = TRUE)
+```
+
+```{r}
+# Prepare test set data: here one block (proteins) is missing
+data.test.gbm <- list(mRNA = glioblastoma_data$data.test$mrna,
+                      protein = glioblastoma_data$data.test$protein)
+
+predict.diablo.gbm <- predict(diablo.gbm, newdata = data.test.gbm)
+
+```
+
+```{r}
+confusion.mat.gbm <- get.confusion_matrix(truth = glioblastoma_data$data.test$class, 
+                     predicted = predict.diablo.gbm$WeightedVote$centroids.dist[,2])
+confusion.mat.gbm
+```
+
+```{r}
+get.BER(confusion.mat.gbm)
+```
+
+`plotLoadings()` visualises the loading weights of each selected variable on each component and each data set. The colour indicates the class in which the variable has the maximum level of expression (`contrib = 'max'`) or minimum (`contrib = 'min'`), on average (`method = 'mean'`) or using the median (`method = 'median'`)
+
+```{r}
+plotLoadings(diablo.gbm, comp = 1, contrib = 'max', method = 'median')
+```
+
+```{r}
+set.seed(123)
+
+perf.diablo.gbm <- perf(diablo.gbm,  validation = 'Mfold', folds = 10, 
+                         nrepeat = 10, dist = 'centroids.dist')
+
+
+```
+
+\# Performance with Majority vote
+
+perf.diablo.gbm\$MajorityVote.error.rate
+
+```{r}
+# Performance with Majority vote
+perf.diablo.gbm$MajorityVote.error.rate
+```
+
+perf.diablo.gbm\$WeightedVote.error.rate
+
+```{r}
+# Performance with Weighted vote
+perf.diablo.gbm$WeightedVote.error.rate
+```
+
+```{r}
+auc.diablo.gbm <- auroc(diablo.gbm, roc.block = "methylation", roc.comp = 2,
+                   print = TRUE)
+```
+
+```{r}
+data.test.gbm <- list(protein = glioblastoma_data$data.test$protein,
+                      methylation = glioblastoma_data$data.test$methylation)
+
+predict.diablo.gbm <- predict(diablo.gbm, newdata = data.test.gbm)
+```
+
+```{r}
+confusion.mat.gbm <- get.confusion_matrix(truth = glioblastoma_data$data.test$class, 
+                     predicted = predict.diablo.gbm$WeightedVote$centroids.dist[,2])
+confusion.mat.gbm
+```
+
+```{r}
+get.BER(confusion.mat.gbm)
+```
