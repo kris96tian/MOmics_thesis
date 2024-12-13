@@ -305,10 +305,10 @@ Test ACC: 0.757
 Test F1 weighted: 0.682
 Test F1 macro: 0.472
 
-
+--
 Test: Epoch 2500
 Test ACC: 0.757
 Test F1 weighted: 0.679
 Test F1 macro: 0.481
-
+--
 azureuser@mybigvm:~/MOGONET$ 
