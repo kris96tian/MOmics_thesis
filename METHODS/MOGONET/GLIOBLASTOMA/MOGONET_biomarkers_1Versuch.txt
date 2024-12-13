@@ -1,0 +1,59 @@
+:~/MOGONET$ py main_biomarker.py 
+/home/azureuser/MOGONET/utils.py:43: UserWarning: torch.sparse.SparseTensor(indices, values, shape, *, device=) is deprecated.  Please use torch.sparse_coo_tensor(indices, values, shape, dtype=, device=). (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:651.)
+  return sparse_tensortype(indices, values, x.size())
+
+
+Traceback (most recent call last):
+  File "/home/azureuser/MOGONET/main_biomarker.py", line 17, in <module>
+    summarize_imp_feat(featimp_list_list)
+  File "/home/azureuser/MOGONET/feat_importance.py", line 79, in summarize_imp_feat
+    df_featimp = df_featimp.append(df_tmp.copy(deep=True), ignore_index=True) 
+                 ^^^^^^^^^^^^^^^^^
+  File "/home/azureuser/.local/lib/python3.12/site-packages/pandas/core/generic.py", line 6299, in __getattr__
+    return object.__getattribute__(self, name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DataFrame' object has no attribute 'append'. Did you mean: '_append'?
+
+
+
+
+azureuser@mybigvm:~/MOGONET$ nano feat_importance.py 
+azureuser@mybigvm:~/MOGONET$ mv feat_importance.py  feat_importance1.py 
+azureuser@mybigvm:~/MOGONET$ touch feat_importance.py 
+azureuser@mybigvm:~/MOGONET$ nano feat_importance.py 
+azureuser@mybigvm:~/MOGONET$ py main_biomarker.py 
+/home/azureuser/MOGONET/utils.py:43: UserWarning: torch.sparse.SparseTensor(indices, values, shape, *, device=) is deprecated.  Please use torch.sparse_coo_tensor(indices, values, shape, dtype=, device=). (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:651.)
+  return sparse_tensortype(indices, values, x.size())
+
+
+Rank    Feature name
+1       ENSG00000135250.17
+2       ENSG00000182934.12
+3       ENSG00000141736.13
+4       ENSG00000119661.15
+5       ENSG00000241553.12
+6       ENSG00000021826.17
+7       ENSG00000138363.15
+8       ENSG00000080503.24
+9       ENSG00000162408.11
+10      ENSG00000185189.18
+11      ENSG00000152253.9
+12      ENSG00000147133.15
+13      ENSG00000148180.19
+14      ENSG00000225830.14
+15      ENSG00000168067.12
+16      ENSG00000117228.10
+17      ENSG00000047579.20
+18      ENSG00000177169.10
+19      ENSG00000100379.17
+20      ENSG00000137161.17
+21      ENSG00000204351.12
+22      ENSG00000137285.10
+23      ENSG00000278196.3
+24      ENSG00000156515.23
+25      ENSG00000134072.11
+26      ENSG00000166471.11
+27      ENSG00000162733.19
+28      ENSG00000112214.10
+29      ENSG00000148841.17
+30      ENSG00000112210.12
