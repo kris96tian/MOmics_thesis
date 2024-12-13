@@ -302,6 +302,7 @@ $ python3 GCN_run.py -fd result/latent_data.csv
                      -ld data/sample_classes.csv 
                      -ts data/test_sample.csv 
                      -m 1 -d gpu -p 20
+
 Using device: cpu
 Loading data...
 Loading data...
@@ -309,44 +310,56 @@ Processing adjacency matrix...
 Normalizing features...
 
 Calculating class weights...
-Class distribution: {0: 15, 1: 4, 2: 50, 3: 20, 4: 4, 5: 22, 6: 3, 7: 4}
-Class weights: {0: 1.0166667, 1: 3.8125, 2: 0.305, 3: 0.7625, 4: 3.8125, 5: 0.6931818, 6: 5.0833335, 7: 3.8125}
+Class distribution: {0: 29, 1: 14, 2: 57, 3: 17, 4: 5}
+Class weights: {0: 0.8413793, 1: 1.7428571, 2: 0.4280702, 3: 1.4352942, 4: 4.88}
 
 Starting train-test mode...
 /home/azureuser/.local/lib/python3.12/site-packages/torch/optim/lr_scheduler.py:62: UserWarning: The verbose parameter is deprecated. Please use get_last_lr() to access the learning rate.
   warnings.warn(
-Epoch:  10 | Loss: 1.9405 | Acc: 0.2644
-Training predictions: {0: 4, 1: 15, 2: 13, 3: 27, 4: 2, 5: 11, 6: 14, 7: 1}
-Epoch:  20 | Loss: 1.8269 | Acc: 0.2414
-Training predictions: {0: 2, 1: 22, 2: 8, 3: 30, 5: 12, 6: 10, 7: 3}
-Epoch:  30 | Loss: 1.7412 | Acc: 0.2184
-Training predictions: {1: 25, 2: 8, 3: 25, 5: 16, 6: 2, 7: 11}
-Epoch:  40 | Loss: 1.6944 | Acc: 0.2644
-Training predictions: {0: 2, 1: 25, 2: 4, 3: 26, 5: 14, 6: 6, 7: 10}
-Epoch:  50 | Loss: 1.6967 | Acc: 0.2644
-Training predictions: {0: 5, 1: 23, 2: 9, 3: 24, 5: 9, 6: 5, 7: 12}
-Epoch:  60 | Loss: 1.6087 | Acc: 0.2069
-Training predictions: {0: 2, 1: 25, 2: 4, 3: 24, 5: 13, 6: 7, 7: 12}
-Early stopping at epoch 63
+Epoch:  10 | Loss: 1.4597 | Acc: 0.4598
+Training predictions: {0: 7, 1: 24, 2: 20, 3: 20, 4: 16}
+Epoch:  20 | Loss: 1.1772 | Acc: 0.6552
+Training predictions: {0: 10, 1: 15, 2: 22, 3: 28, 4: 12}
+Epoch:  30 | Loss: 1.0059 | Acc: 0.6552
+Training predictions: {0: 12, 1: 11, 2: 22, 3: 28, 4: 14}
+Epoch:  40 | Loss: 0.8252 | Acc: 0.7126
+Training predictions: {0: 15, 1: 10, 2: 22, 3: 31, 4: 9}
+Epoch:  50 | Loss: 0.7195 | Acc: 0.7471
+Training predictions: {0: 15, 1: 7, 2: 28, 3: 26, 4: 11}
+Epoch:  60 | Loss: 0.6038 | Acc: 0.7931
+Training predictions: {0: 14, 1: 7, 2: 30, 3: 24, 4: 12}
+Epoch:  70 | Loss: 0.6099 | Acc: 0.7816
+Training predictions: {0: 14, 1: 12, 2: 27, 3: 25, 4: 9}
+Epoch:  80 | Loss: 0.5996 | Acc: 0.8161
+Training predictions: {0: 15, 1: 11, 2: 32, 3: 21, 4: 8}
+Epoch:  90 | Loss: 0.6099 | Acc: 0.7816
+Training predictions: {0: 14, 1: 13, 2: 31, 3: 22, 4: 7}
+Epoch: 100 | Loss: 0.5563 | Acc: 0.8276
+Training predictions: {0: 14, 1: 11, 2: 32, 3: 22, 4: 8}
+Epoch: 110 | Loss: 0.6109 | Acc: 0.7931
+Training predictions: {0: 15, 1: 10, 2: 31, 3: 23, 4: 8}
+Early stopping at epoch 118
 
-Training finished. Best epoch: 43
+Training finished. Best epoch: 98
 /home/azureuser/MoGCN_br/GCN_run.py:190: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
   checkpoint = torch.load('model/GCN/best_model.pkl')
 
 Evaluating on test set...
 
 Raw logits (first 3 samples):
-tensor([[ 0.8042, -1.5097,  0.9768,  1.7227,  0.1148, -0.9451,  0.0579, -0.3144],
-        [ 0.4352, -0.6618,  0.6786,  1.2644, -0.0714, -0.7686,  0.1405, -0.5146],
-        [ 0.1906, -1.0739,  0.9003,  1.6764, -0.0506, -0.6576,  0.4413, -0.4446]])
+tensor([[ 3.4772,  0.6877, -3.5212, -1.0820,  0.0340],
+        [ 1.7355,  1.3732, -2.5318, -2.3984,  1.4394],
+        [ 3.1944,  0.7918, -3.1755, -1.8768,  0.6694]])
 
 Predictions distribution:
-{1: 10, 3: 17, 5: 3, 6: 1, 7: 4}
+{0: 13, 1: 3, 2: 12, 3: 6, 4: 1}
 
-Test results: Loss=2.0717, Acc=0.1429, F1=0.0878
+--
+Test results: Loss=0.5862, Acc=0.8000, F1=0.8538
+-- 
 
 Prediction probabilities (first 3 samples):
-tensor([[0.1595, 0.0158, 0.1895, 0.3996, 0.0801, 0.0277, 0.0756, 0.0521],
-        [0.1442, 0.0481, 0.1839, 0.3304, 0.0869, 0.0433, 0.1074, 0.0558],
-        [0.0929, 0.0262, 0.1889, 0.4105, 0.0730, 0.0398, 0.1194, 0.0492]])
+tensor([[9.0514e-01, 5.5623e-02, 8.2667e-04, 9.4769e-03, 2.8930e-02],
+        [4.0487e-01, 2.8184e-01, 5.6762e-03, 6.4866e-03, 3.0112e-01],
+        [8.4852e-01, 7.6772e-02, 1.4529e-03, 5.3242e-03, 6.7929e-02]])
 Finished!
