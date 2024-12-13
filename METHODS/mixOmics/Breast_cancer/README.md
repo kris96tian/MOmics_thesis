@@ -1,4 +1,6 @@
-<img src="https://github.com/kris96tian/MOmics_thesis/blob/main/METHODS/mixOmics/Breast_cancer/ENRICHMENT/downregulated_enrichment_plot.png?raw=true" alt="downregulated_enrichment_plot.png"/>![image](https://github.com/user-attachments/assets/b2fa6ca6-94bb-46c3-9ff6-5b450fce85da)
+<img src="https://github.com/kris96tian/MOmics_thesis/blob/main/METHODS/mixOmics/Breast_cancer/ENRICHMENT/downregulated_enrichment_plot.png?raw=true" alt="downregulated_enrichment_plot.png"/>
+
+<img src="https://github.com/kris96tian/MOmics_thesis/blob/main/METHODS/mixOmics/Breast_cancer/ENRICHMENT/upregulated_enrichment_plot.png?raw=true" alt="upregulated_enrichment_plot.png"/>
 
 
 
