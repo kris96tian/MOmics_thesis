@@ -418,3 +418,34 @@ $protein$comp2
 3              0              0              3              1
 > get.BER(confusion.mat.br)
 [1] 0.2067308
+
+
+
+To calculate accuracy for this confusion matrix, we use the same formula as before:
+
+\[
+\text{Accuracy} = \frac{\text{Number of correct predictions}}{\text{Total number of predictions}}
+\]
+
+From the matrix:
+
+- **True Positives (TP):** These are the diagonal elements, where the predicted class matches the true class:
+  - \(TP_0 = 4\) (predicted as 0, true class is 0)
+  - \(TP_1 = 2\) (predicted as 1, true class is 1)
+  - \(TP_2 = 12\) (predicted as 2, true class is 2)
+  - \(TP_3 = 1\) (predicted as 3, true class is 3)
+
+- The total number of correct predictions is:
+\[
+\text{Correct} = TP_0 + TP_1 + TP_2 + TP_3 = 4 + 2 + 12 + 1 = 19
+\]
+
+- The total number of predictions is the sum of all elements in the confusion matrix:
+\[
+\text{Total} = 4 + 0 + 0 + 0 + 0 + 2 + 0 + 0 + 0 + 0 + 12 + 1 + 0 + 0 + 3 + 1 = 23
+\]
+
+Thus, the accuracy is:
+\[
+\text{Accuracy} = \frac{19}{23} \approx 0.8261 \text{ or } 82.61\%
+\]
