@@ -1,0 +1,33 @@
+py main_biomarker.py 
+
+Rank    Feature name
+1       ZNF619
+2       BSPRY
+3       EPS15
+4       NASP
+5       TTC39A
+6       CELA2A
+7       PHLDA3
+8       LAD1
+9       CARNS1
+10      VPS18
+11      CD4
+12      TAF12
+13      STK3
+14      ILF3
+15      DDX49
+16      ZZZ3
+17      NCKIPSD
+18      RAB11FIP5
+19      AMFR
+20      TYW3
+21      RPS27L
+22      SPEN
+23      EEF1A2
+24      ARHGAP31
+25      DIP2A
+26      MIR4695
+27      RANBP3
+28      IRX5
+29      DERL1
+30      TCIRG1
