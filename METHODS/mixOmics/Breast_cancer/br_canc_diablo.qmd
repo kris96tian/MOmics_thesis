@@ -1,0 +1,228 @@
+---
+title: "Breast Cancer"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(data.table)
+library(mixOmics)
+citation('mixOmics')
+```
+
+```{r}
+load("~/PROJECTS_ALL/MIX_BR/bcancerdata.RData")
+```
+
+```{r}
+X <- list(mRNA = bcancerdata$data.train$mrna,
+          scnv = bcancerdata$data.train$scnv,
+          protein = bcancerdata$data.train$protein
+)
+
+Y <- bcancerdata$data.train$class
+
+```
+
+```{r}
+design <- matrix(0.1, ncol = length(X), nrow = length(X), 
+                dimnames = list(names(X), names(X)))
+diag(design) <- 0
+design 
+```
+
+```{r}
+res1.pls.br <- pls(X$mRNA, X$protein, ncomp = 1)
+cor(res1.pls.br$variates$X, res1.pls.br$variates$Y)
+```
+
+```{r}
+res2.pls.br <- pls(X$mRNA, X$scnv, ncomp = 1)
+cor(res2.pls.br$variates$X, res2.pls.br$variates$Y)
+```
+
+```{r}
+res3.pls.br <- pls(X$protein, X$scnv, ncomp = 1)
+cor(res3.pls.br$variates$X, res3.pls.br$variates$Y)
+```
+
+```{r}
+Y[is.na(Y)] <- 0
+Y <- factor(Y, levels = c(0,1,2,3))
+print(Y)
+```
+
+```{r}
+diablo.br <- block.plsda(X, Y, ncomp = 5, design = design)
+```
+
+```{r}
+set.seed(123) 
+
+perf.diablo.br = perf(diablo.br, validation = 'Mfold', folds = 10, nrepeat = 10)
+```
+
+```{r}
+plot(perf.diablo.br)
+```
+
+```{r}
+perf.diablo.br$choice.ncomp$WeightedVote
+```
+
+```{r}
+ncomp <- perf.diablo.br$choice.ncomp$WeightedVote["Overall.BER", "centroids.dist"]
+```
+
+```{r}
+set.seed(123) 
+
+test.keepX <- list(mRNA = c(5:9, seq(10, 25, 5)),
+                   scnv = c(5:9, seq(10, 20, 2)),
+                   proteomics = c(seq(5, 25, 5)))
+
+
+tune.diablo.br <- tune.block.splsda(X, Y, ncomp = 2, 
+                              test.keepX = test.keepX, design = design,
+                              validation = 'Mfold', folds = 3, nrepeat = 5, 
+                              BPPARAM = BiocParallel::SnowParam(workers = 2),
+                              dist = "centroids.dist")
+```
+
+```{r}
+list.keepX <- tune.diablo.br$choice.keepX
+list.keepX
+```
+
+```{r}
+diablo.br <- block.splsda(X, Y, ncomp = 2, 
+                            keepX = list.keepX, design = design)
+```
+
+```{r}
+diablo.br$design
+```
+
+```{r}
+# mRNA variables selected on component 1
+selectVar(diablo.br, block = 'mRNA', comp = 1)
+```
+
+## **Plotting**
+
+`plotDiablo()` is a diagnostic plot to check whether the correlations between components from each data set were maximised as specified in the design matrix. We specify the dimension to be assessed with the `ncomp` argument
+
+```{r}
+plotDiablo(diablo.br, ncomp = 2,  save = 'png', name.save = '/home/azureuser/PROJECTS_ALL/MIX_BR/diablo-plot.png')
+```
+
+```{r}
+
+plotIndiv(diablo.br, ind.names = FALSE, legend = TRUE, 
+          title = 'Breast Cancer, DIABLO comp 1 - 2')
+```
+
+```{r}
+plotArrow(diablo.br, ind.names = FALSE, legend = TRUE, 
+          title = 'Breast Cancer, DIABLO comp 1 - 2')
+```
+
+```{r}
+plotVar(diablo.br, var.names = FALSE, style = 'graphics', legend = TRUE, 
+        pch = c(16, 17, 15), cex = c(2,2,2), 
+        col = c('darkorchid', 'brown1', 'lightgreen'),
+        title = 'Breast Cancer, DIABLO comp 1 - 2')
+```
+
+**Correlation circle plot from multiblock sPLS-DA performed on the `breast cancer` data.** The variable coordinates are defined according to their correlation with the first and second components for each data set. Variable types are indicated with different symbols and colours, and are overlaid on the same plot. The plot highlights the potential associations within and between different variable types when they are important in defining their own component.
+
+```{r}
+circosPlot(diablo.br, cutoff = 0.6, line = TRUE, 
+           color.blocks = c('darkorchid', 'brown1', 'lightgreen'),
+           color.cor = c("chocolate3","grey20"), size.labels = 1.5)
+```
+
+**Circos plot from multiblock sPLS-DA performed on the `breast cancer` data.** The plot represents the correlations greater than 0.6 between variables of different types, represented on the side quadrants. The internal connecting lines show the positive (negative) correlations. The outer lines show the expression levels of each variable in each sample group.
+
+```{r}
+network(diablo.br, blocks = c(1,2,3), 
+        cutoff = 0.4,
+        color.node = c('darkorchid', 'brown1', 'lightgreen'),
+        save = 'png', name.save = 'diablo-network'
+        )
+```
+
+**Relevance network for the variables selected by multiblock sPLS-DA performed on the `breast cancer` data on component 1.** Each node represents a selected variable with colours indicating their type. The colour of the edges represent positive or negative correlations.
+
+## Model performance and prediction
+
+```{r}
+set.seed(123) 
+
+perf.diablo.br <- perf(diablo.br,  validation = 'Mfold', folds = 10, 
+                         nrepeat = 10, dist = 'centroids.dist')
+
+```
+
+# Performance with Majority vote
+
+perf.diablo.br\$MajorityVote.error.rate
+
+```{r}
+
+# Performance with Weighted vote
+perf.diablo.br$WeightedVote.error.rate
+```
+
+```{r}
+auc.diablo.br <- auroc(diablo.br, roc.block = "protein", roc.comp = 2,
+                   print = TRUE)
+```
+
+```{r}
+# Prepare test set data: here one block (proteins) is missing
+data.test.br <- list(mRNA = bcancerdata$data.test$mrna,
+                      protein = bcancerdata$data.test$protein)
+
+predict.diablo.br <- predict(diablo.br, newdata = data.test.br)
+
+```
+
+```{r}
+confusion.mat.br <- get.confusion_matrix(truth = bcancerdata$data.test$class, 
+                     predicted = predict.diablo.br$WeightedVote$centroids.dist[,2])
+confusion.mat.br
+```
+
+`plotLoadings()` visualises the loading weights of each selected variable on each component and each data set. The colour indicates the class in which the variable has the maximum level of expression (`contrib = 'max'`) or minimum (`contrib = 'min'`), on average (`method = 'mean'`) or using the median (`method = 'median'`)
+
+```{r}
+plotLoadings(diablo.br, comp = 1, contrib = 'max', method = 'median')
+```
+
+```{r}
+auc.diablo.br <- auroc(diablo.br, roc.block = "methylation", roc.comp = 2,
+                   print = TRUE)
+```
+
+```{r}
+auc.diablo.br <- auroc(diablo.br, roc.block = "mRNA", roc.comp = 2,
+                   print = TRUE)
+```
+
+```{r}
+data.test.br <- list(protein = bcancerdata$data.test$protein,
+                      scnv = bcancerdata$data.test$scnv)
+
+predict.diablo.br <- predict(diablo.br, newdata = data.test.br)
+```
+
+```{r}
+confusion.mat.br <- get.confusion_matrix(truth = bcancerdata$data.test$class, 
+                     predicted = predict.diablo.br$WeightedVote$centroids.dist[,2])
+confusion.mat.br
+```
+
+```{r}
+get.BER(confusion.mat.br)
+```

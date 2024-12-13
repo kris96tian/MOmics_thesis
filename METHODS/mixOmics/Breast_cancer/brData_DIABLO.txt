@@ -1,0 +1,420 @@
+> library(data.table)
+  library(mixOmics)
+  citation('mixOmics')
+
+To cite mixOmics in publications, please use:
+
+  Rohart F, Gautier B, Singh A, and Le Cao K-A (2017) mixOmics: An R
+  package for 'omics feature selection and multiple data integration.
+  PLoS computational biology 13(11):e1005752
+
+A BibTeX entry for LaTeX users is
+
+  @Article{,
+    author = {Rohart F and Gautier B and Singh A and Le Cao K-A},
+    title = {mixOmics: An R package for 'omics feature selection and multiple data integration},
+    journal = {PLoS computational biology},
+    volume = {13},
+    number = {11},
+    pages = {e1005752},
+    year = {2017},
+    publisher = {Public Library of Science},
+    url = {http://www.mixOmics.org},
+  }
+
+
+  
+> load("~/PROJECTS_ALL/MIX_BR/bcancerdata.RData")
+> X <- list(mRNA = bcancerdata$data.train$mrna,
++           scnv = bcancerdata$data.train$scnv,
++           protein = bcancerdata$data.train$protein
++ )
+
+Y <- bcancerdata$data.train$class
+
+
+> design <- matrix(0.1, ncol = length(X), nrow = length(X), 
++                 dimnames = list(names(X), names(X)))
+
+> diag(design) <- 0
+
+> design
+        mRNA scnv protein
+mRNA     0.0  0.1     0.1
+scnv     0.1  0.0     0.1
+protein  0.1  0.1     0.0
+
+
+> res1.pls.br <- pls(X$mRNA, X$protein, ncomp = 1)
+cor(res1.pls.br$variates$X, res1.pls.br$variates$Y)
+res2.pls.br <- pls(X$mRNA, X$scnv, ncomp = 1)
+cor(res2.pls.br$variates$X, res2.pls.br$variates$Y)
+res3.pls.br <- pls(X$protein, X$scnv, ncomp = 1)
+cor(res3.pls.br$variates$X, res3.pls.br$variates$Y)
+
+> cor(res1.pls.br$variates$X, res1.pls.br$variates$Y)
+          comp1
+comp1 0.9648636
+
+> res2.pls.br <- pls(X$mRNA, X$scnv, ncomp = 1)
+> cor(res2.pls.br$variates$X, res2.pls.br$variates$Y)
+      comp1
+comp1     1
+
+> res3.pls.br <- pls(X$protein, X$scnv, ncomp = 1)
+> cor(res3.pls.br$variates$X, res3.pls.br$variates$Y)
+          comp1
+comp1 0.9648636
+
+> Y[is.na(Y)] <- 0
+> Y <- factor(Y, levels = c(0,1,2,3))
+> print(Y)
+ [1] 0 0 0 0 0 1 2 1 0 0 2 2 0 0 2 0 3 2 0 0 0 2 2 2 0 2 2 2 0 2 2 2 2 2 2 0 2 0
+[39] 0 1 0 1 2 0 2 2 0 1 2 0 1 2 3 2 3 2 3 2 3 0 1 2 3 2 2 0 0 2 2 1 1 2 2 0 1 2
+[77] 1 3 3 2 3 2 2 3 2 2 2 0 0 1 2 3 2 3 0 3 2 2
+Levels: 0 1 2 3
+
+
+> diablo.br <- block.plsda(X, Y, ncomp = 5, design = design)
+Design matrix has changed to include Y; each block will be
+            linked to Y.
+
+
+            
+> set.seed(123)  
+> perf.diablo.br = perf(diablo.br, validation = 'Mfold', folds = 10, nrepeat = 10)
+> plot(perf.diablo.br)
+> perf.diablo.br$choice.ncomp$WeightedVote
+            max.dist centroids.dist mahalanobis.dist
+Overall.ER         5              4                3
+Overall.BER        5              4                3
+
+> ncomp <- perf.diablo.br$choice.ncomp$WeightedVote["Overall.BER", "centroids.dist"]
+
+
+
+> set.seed(123)  
+> test.keepX <- list(mRNA = c(5:9, seq(10, 25, 5)),
++                    scnv = c(5:9, seq(10, 20, 2)),
++                    proteomics = c(seq(5, 25, 5)))
+2, 
+ 
+
+> tune.diablo.br <- tune.block.splsda(X, Y, ncomp = 2, 
++                               test.keepX = test.keepX, design = design,
++                               validation = 'Mfold', folds = 3, nrepeat = 5, 
++                               BPPARAM = BiocParallel::SnowParam(workers = 2),
++                               dist = "centroids.dist")
+Design matrix has changed to include Y; each block will be
+            linked to Y.
+
+You have provided a sequence of keepX of length:  9 for block mRNA and 11 for block scnv and  5 for block proteomics.
+This results in 495 models being fitted for each component and each nrepeat, this may take some time to run, be patient!
+
+
+
+
+> list.keepX <- tune.diablo.br$choice.keepX
+> list.keepX
+$mRNA
+[1] 20 10
+
+$scnv
+[1]  5 20
+
+$protein
+[1] 20  5
+
+
+> diablo.br <- block.splsda(X, Y, ncomp = 2, 
++                             keepX = list.keepX, design = design)
+Design matrix has changed to include Y; each block will be
+            linked to Y.
+            
+> diablo.br$design
+        mRNA scnv protein Y
+mRNA     0.0  0.1     0.1 1
+scnv     0.1  0.0     0.1 1
+protein  0.1  0.1     0.0 1
+Y        1.0  1.0     1.0 0
+
+> # mRNA variables selected on component 1
+> selectVar(diablo.br, block = 'mRNA', comp = 1)
+$mRNA
+$mRNA$name
+ [1] "CA12"    "THSD4"   "TBC1D9"  "GFRA1"   "IL6ST"   "ESR1"    "DACH1"  
+ [8] "MLPH"    "XBP1"    "PGR"     "CCNE1"   "ZG16B"   "PSAT1"   "ENO1"   
+[15] "SCUBE2"  "CPEB2"   "PFKP"    "ACADSB"  "DNAJC12" "ANKRA2" 
+
+
+$mRNA$value
+          value.var
+CA12     0.39819579
+THSD4    0.39715330
+TBC1D9   0.35756746
+GFRA1    0.35596854
+IL6ST    0.27958475
+ESR1     0.27086995
+DACH1    0.24358524
+MLPH     0.23282021
+XBP1     0.20413719
+PGR      0.19682065
+CCNE1   -0.16859947
+ZG16B    0.16362949
+PSAT1   -0.12102384
+ENO1    -0.07353477
+SCUBE2   0.06869528
+CPEB2    0.03590851
+PFKP    -0.03246028
+ACADSB   0.02385063
+DNAJC12  0.02111726
+ANKRA2   0.01795270
+
+
+$comp
+[1] 1
+
+> plotDiablo(diablo.br, ncomp = 2)
+> plotIndiv(diablo.br, ind.names = FALSE, legend = TRUE, 
++           title = 'Breast Cancer, DIABLO comp 1 - 2')
+> plotArrow(diablo.br, ind.names = FALSE, legend = TRUE, 
++           title = 'Breast Cancer, DIABLO comp 1 - 2')
+> plotVar(diablo.br, var.names = FALSE, style = 'graphics', legend = TRUE, 
++         pch = c(16, 17, 15), cex = c(2,2,2), 
++         col = c('darkorchid', 'brown1', 'lightgreen'),
++         title = 'Breast Cancer, DIABLO comp 1 - 2')
+> circosPlot(diablo.br, cutoff = 0.6, line = TRUE, 
++            color.blocks = c('darkorchid', 'brown1', 'lightgreen'),
++            color.cor = c("chocolate3","grey20"), size.labels = 1.5)
+
+
+adding block name to feature names in the output similarity matrix as there are similar feature names across blocks.
+
+
+> network(diablo.br, blocks = c(1,2,3), 
++         cutoff = 0.4,
++         color.node = c('darkorchid', 'brown1', 'lightgreen'),
++         save = 'png', name.save = 'diablo-network'
++         )
+
+
+
+
+> set.seed(123) 
+> perf.diablo.br <- perf(diablo.br,  validation = 'Mfold', folds = 10, 
++                          nrepeat = 10, dist = 'centroids.dist')
+
+> 0.68832 1.32918 -0.2108 0.00
+
+
+
+
+> # Performance with Weighted vote
+> perf.diablo.br$WeightedVote.error.rate
+$centroids.dist
+                comp1     comp2
+0           0.2000000 0.1965517
+1           0.4000000 0.5416667
+2           0.4295455 0.2181818
+3           0.4461538 0.3461538
+Overall.ER  0.3602041 0.2683673
+Overall.BER 0.3689248 0.3256385
+
+
+
+
+> auc.diablo.br <- auroc(diablo.br, roc.block = "protein", roc.comp = 2,
++                    print = TRUE)
+$mRNA
+$mRNA$comp1
+                 AUC   p-value
+0 vs Other(s) 0.9835 5.063e-14
+1 vs Other(s) 0.6919 3.189e-02
+2 vs Other(s) 0.8939 2.303e-11
+3 vs Other(s) 0.7077 1.623e-02
+
+$mRNA$comp2
+                 AUC   p-value
+0 vs Other(s) 0.9835 5.063e-14
+1 vs Other(s) 0.6948 2.938e-02
+2 vs Other(s) 0.9832 2.220e-16
+3 vs Other(s) 0.9557 1.339e-07
+
+
+$scnv
+$scnv$comp1
+                 AUC   p-value
+0 vs Other(s) 0.9740 1.557e-13
+1 vs Other(s) 0.7016 2.418e-02
+2 vs Other(s) 0.8628 7.421e-10
+3 vs Other(s) 0.7665 2.039e-03
+
+$scnv$comp2
+                 AUC   p-value
+0 vs Other(s) 0.9760 1.232e-13
+1 vs Other(s) 0.7064 2.098e-02
+2 vs Other(s) 0.9722 1.110e-15
+3 vs Other(s) 0.9557 1.339e-07
+
+
+$protein
+$protein$comp1
+                 AUC   p-value
+0 vs Other(s) 0.9750 1.386e-13
+1 vs Other(s) 0.7103 1.868e-02
+2 vs Other(s) 0.8977 1.482e-11
+3 vs Other(s) 0.7014 1.979e-02
+
+$protein$comp2
+                 AUC   p-value
+0 vs Other(s) 0.9755 1.306e-13
+1 vs Other(s) 0.7180 1.475e-02
+2 vs Other(s) 0.9819 2.220e-16
+3 vs Other(s) 0.9810 2.596e-08
+
+
+
+
+
+> # Prepare test set data: here one block (proteins) is missing
+> data.test.br <- list(mRNA = bcancerdata$data.test$mrna,
++                       protein = bcancerdata$data.test$protein)
+
+> 
+> predict.diablo.br <- predict(diablo.br, newdata = data.test.br)
+Warning message:
+In predict.block.spls(diablo.br, newdata = data.test.br) :
+  Some blocks are missing in 'newdata'; the prediction is based on the following blocks only: mRNA, protein
+
+
+
+
+
+> confusion.mat.br <- get.confusion_matrix(truth = bcancerdata$data.test$class, 
++                      predicted = predict.diablo.br$WeightedVote$centroids.dist[,2])
+confusion.mat.br
+> confusion.mat.br
+  predicted.as.0 predicted.as.1 predicted.as.2 predicted.as.3
+0              4              0              0              0
+1              0              2              0              0
+2              0              0             12              1
+3              0              0              3              1
+
+
+
+
+
+
+> auc.diablo.br <- auroc(diablo.br, roc.block = "methylation", roc.comp = 2,
++                    print = TRUE)
+$mRNA
+$mRNA$comp1
+                 AUC   p-value
+0 vs Other(s) 0.9835 5.063e-14
+1 vs Other(s) 0.6919 3.189e-02
+2 vs Other(s) 0.8939 2.303e-11
+3 vs Other(s) 0.7077 1.623e-02
+
+$mRNA$comp2
+                 AUC   p-value
+0 vs Other(s) 0.9835 5.063e-14
+1 vs Other(s) 0.6948 2.938e-02
+2 vs Other(s) 0.9832 2.220e-16
+3 vs Other(s) 0.9557 1.339e-07
+
+
+$scnv
+$scnv$comp1
+                 AUC   p-value
+0 vs Other(s) 0.9740 1.557e-13
+1 vs Other(s) 0.7016 2.418e-02
+2 vs Other(s) 0.8628 7.421e-10
+3 vs Other(s) 0.7665 2.039e-03
+
+$scnv$comp2
+                 AUC   p-value
+0 vs Other(s) 0.9760 1.232e-13
+1 vs Other(s) 0.7064 2.098e-02
+2 vs Other(s) 0.9722 1.110e-15
+3 vs Other(s) 0.9557 1.339e-07
+
+
+$protein
+$protein$comp1
+                 AUC   p-value
+0 vs Other(s) 0.9750 1.386e-13
+1 vs Other(s) 0.7103 1.868e-02
+2 vs Other(s) 0.8977 1.482e-11
+3 vs Other(s) 0.7014 1.979e-02
+
+$protein$comp2
+                 AUC   p-value
+0 vs Other(s) 0.9755 1.306e-13
+1 vs Other(s) 0.7180 1.475e-02
+2 vs Other(s) 0.9819 2.220e-16
+3 vs Other(s) 0.9810 2.596e-08
+
+
+
+
+> auc.diablo.br <- auroc(diablo.br, roc.block = "mRNA", roc.comp = 2,
++                    print = TRUE)
+$mRNA
+$mRNA$comp1
+                 AUC   p-value
+0 vs Other(s) 0.9835 5.063e-14
+1 vs Other(s) 0.6919 3.189e-02
+2 vs Other(s) 0.8939 2.303e-11
+3 vs Other(s) 0.7077 1.623e-02
+
+$mRNA$comp2
+                 AUC   p-value
+0 vs Other(s) 0.9835 5.063e-14
+1 vs Other(s) 0.6948 2.938e-02
+2 vs Other(s) 0.9832 2.220e-16
+3 vs Other(s) 0.9557 1.339e-07
+
+
+$scnv
+$scnv$comp1
+                 AUC   p-value
+0 vs Other(s) 0.9740 1.557e-13
+1 vs Other(s) 0.7016 2.418e-02
+2 vs Other(s) 0.8628 7.421e-10
+3 vs Other(s) 0.7665 2.039e-03
+
+$scnv$comp2
+                 AUC   p-value
+0 vs Other(s) 0.9760 1.232e-13
+1 vs Other(s) 0.7064 2.098e-02
+2 vs Other(s) 0.9722 1.110e-15
+3 vs Other(s) 0.9557 1.339e-07
+
+
+$protein
+$protein$comp1
+                 AUC   p-value
+0 vs Other(s) 0.9750 1.386e-13
+1 vs Other(s) 0.7103 1.868e-02
+2 vs Other(s) 0.8977 1.482e-11
+3 vs Other(s) 0.7014 1.979e-02
+
+$protein$comp2
+                 AUC   p-value
+0 vs Other(s) 0.9755 1.306e-13
+1 vs Other(s) 0.7180 1.475e-02
+2 vs Other(s) 0.9819 2.220e-16
+3 vs Other(s) 0.9810 2.596e-08
+
+
+
+
+
+> confusion.mat.br
+  predicted.as.0 predicted.as.1 predicted.as.2 predicted.as.3
+0              4              0              0              0
+1              0              2              0              0
+2              0              0             12              1
+3              0              0              3              1
+> get.BER(confusion.mat.br)
+[1] 0.2067308
