@@ -3,7 +3,8 @@
 
 ## UMAP
 
-<img src="https://userpage.fu-berlin.de/kristiaa96/notebooks/images/umapmofa_br.png" alt="UMAP Plot"/>![image](https://github.com/user-attachments/assets/fb37a083-d218-45a3-b8d8-bd0e8bf9f4a5)
+<img src="https://userpage.fu-berlin.de/kristiaa96/notebooks/images/umapmofa_br.png" alt="UMAP Plot"/>![image](https://github.com/user-attachments/assets/313f4fd6-283d-4884-ba96-6b800349abd2)
+
 
 ## Link of full notebook:
 
